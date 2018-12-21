@@ -19,14 +19,17 @@ namespace func02
         [FunctionName("CreateTodo")]
         public static async Task<IActionResult> CreateTodo(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "todo")] HttpRequest req,
-            [Table("todos", Connection = "AzureWebJobsStorage")] IAsyncCollector<TodoTableEntity> todoTable,
+            [Table("todos", Connection = "AzureWebJobsStorage")] IAsyncCollector<TodoTableEntity> todoTable, //output binding
+            [Queue("todos", Connection = "AzureWebJobsStorage")] IAsyncCollector<Todo> todoQueue, //output binding
             ILogger log)
         {
             log.LogInformation("Creating a new todo list item");
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             var input = JsonConvert.DeserializeObject<TodoCreateModel>(requestBody);
             var todo = new Todo() { TaskDescription = input.TaskDescription };
+
             await todoTable.AddAsync(todo.ToTableEntity());
+            await todoQueue.AddAsync(todo);
 
             return new OkObjectResult(todo);
         }
